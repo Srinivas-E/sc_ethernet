@@ -73,8 +73,7 @@ int mac_custom_filter(unsigned int data[]){
   else if (is_ethertype((data,char[]), ethertype_client_4)){
     return 8;
   }
-  //return 0;
-  return 1;
+  return 0;
 }
 //::
 
@@ -106,6 +105,7 @@ void app_client(chanend tx, chanend rx, int client_num)
   //::get-macaddr
   mac_get_macaddr(tx, own_mac_addr);
   if (client_num == 1) {
+	  printstr("Device MAC address: ");
 	  printhex(own_mac_addr[0]); printchar(':'); printhex(own_mac_addr[1]); printchar(':');
 	  printhex(own_mac_addr[2]); printchar(':'); printhex(own_mac_addr[3]); printchar(':');
 	  printhex(own_mac_addr[4]); printchar(':'); printhexln(own_mac_addr[5]);
@@ -114,10 +114,7 @@ void app_client(chanend tx, chanend rx, int client_num)
 
   //::setup-filter
   mac_set_custom_filter(rx, 0x1 << (client_num-1));
-  //mac_set_custom_filter(rx, 0x1);
   //::
-  //printstr("Test started on : ");
-  //printintln(client_num);
 
   //::mainloop
   while (1)
@@ -130,7 +127,7 @@ void app_client(chanend tx, chanend rx, int client_num)
     if (is_client_eth_packet((rxbuf,char[]), nbytes, client_num)) {
       build_response((rxbuf,char[]), txbuf, nbytes);
       mac_tx(tx, txbuf, nbytes, ETH_BROADCAST);
-      printstr("Device response sent on ");
+      printstr("Device response sent from client ");
       printintln(client_num);
     }
     //else
