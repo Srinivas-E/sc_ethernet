@@ -25,6 +25,7 @@
 #include "xscope.h"
 
 #define USE_XSCOPE 0
+#define ETHERTYPE_OFFSET 12
 
 #if USE_XSCOPE
 void xscope_user_init(void) {
@@ -46,44 +47,36 @@ smi_interface_t smi = ETHERNET_DEFAULT_SMI_INIT;
 mii_interface_t mii = ETHERNET_DEFAULT_MII_INIT;
 ethernet_reset_interface_t eth_rst = ETHERNET_DEFAULT_RESET_INTERFACE_INIT;
 
-unsigned char ethertype_client_1[] = {0x26, 0xB1};
-unsigned char ethertype_client_2[] = {0x26, 0xB2};
-unsigned char ethertype_client_3[] = {0x26, 0xB3};
-unsigned char ethertype_client_4[] = {0x26, 0xB4};
-
 void app_client(chanend tx, chanend rx, int client_num);
 
 #pragma unsafe arrays
-int is_ethertype(unsigned char data[], unsigned char type[]){
-	int i = 12;
-	return data[i] == type[0] && data[i + 1] == type[1];
+void get_ethertype(unsigned char data[], unsigned char ethertype[2])
+{
+  int offset = ETHERTYPE_OFFSET;
+  // Skip VLAN Q tags. It is possible to have double VLAN tags
+  while (data[offset] == 0x81 && data[offset + 1] == 0x00) {
+    offset += 4;
+  }
+  ethertype[0] = data[offset];
+  ethertype[1] = data[offset + 1];
 }
 
 //::custom-filter
-int mac_custom_filter(unsigned int data[]){
-  if (is_ethertype((data,char[]), ethertype_client_1)){
-    return 1;
+int mac_custom_filter(unsigned int data[])
+{
+  unsigned char ethertype[2];
+  get_ethertype((data, char[]), ethertype);
+  if (ethertype[0] == 0x26) {
+    switch (ethertype[1]) {
+      case 0xb1: return 1;
+      case 0xb2: return 2;
+      case 0xb3: return 4;
+      case 0xb4: return 8;
+    }
   }
-  else if (is_ethertype((data,char[]), ethertype_client_2)){
-    return 2;
-  }
-  else if (is_ethertype((data,char[]), ethertype_client_3)){
-    return 4;
-  }
-  else if (is_ethertype((data,char[]), ethertype_client_4)){
-    return 8;
-  }
-  return 0;
+   return 0;
 }
 //::
-
-int is_client_eth_packet(const unsigned char rxbuf[], int nbytes, int client_num)
-{
-  if (rxbuf[12] != 0x26 || rxbuf[13] != (0xB0+client_num))
-    return 0;
-
-  return 1;
-}
 
 int build_response(unsigned char rxbuf[], unsigned int txbuf[], unsigned int nbytes)
 {
@@ -123,16 +116,12 @@ void app_client(chanend tx, chanend rx, int client_num)
     unsigned int nbytes;
     mac_rx(rx, (rxbuf,char[]), nbytes, src_port);
 
-   //::client_packet_check
-    if (is_client_eth_packet((rxbuf,char[]), nbytes, client_num)) {
-      build_response((rxbuf,char[]), txbuf, nbytes);
-      mac_tx(tx, txbuf, nbytes, ETH_BROADCAST);
-      printstr("Device response sent from client ");
-      printintln(client_num);
-    }
-    //else
-    //  printstrln("Pkt not for us");
-  //::
+    //::client_packet_check
+    build_response((rxbuf,char[]), txbuf, nbytes);
+    mac_tx(tx, txbuf, nbytes, ETH_BROADCAST);
+    printstr("Device response sent from client ");
+    printintln(client_num);
+    //::
   }
 }
 

@@ -22,5 +22,13 @@ XCC_FLAGS_custom = -g -report -save-temps
 # The VERBOSE variable, if set to 1, enables verbose output from the make system.
 VERBOSE = 0
 
+# This change to the module path is so that this application can be in the
+# tests sub-directory in it's git repo
+ifeq ($(notdir $(abspath ..)),tests)
+PATHSEP = $(if $(findstring Windows, $(OS))$(findstring WINDOWS,$(OS)),;,:)
+XMOS_MODULE_PATH := $(XMOS_MODULE_PATH)$(PATHSEP)../../..
+endif
+
+
 XMOS_MAKE_PATH ?= ../..
 -include $(XMOS_MAKE_PATH)/xcommon/module_xcommon/build/Makefile.common
