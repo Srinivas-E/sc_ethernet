@@ -1,1 +1,10 @@
 MII/MAC dc tests
+
+A random traffic generator application which should be able to deliver line-rate traffic. 
+> AVB system to generate all the AVB traffic 
+> a generator application that simply inserts non-AVB traffic to stress the system utilizing the dual mii layer
+
+Set-up and usage
+> Use the PC for control messages (they will be forwarded through)
+      PC  -> Traffic Generator -> AVB-DC -> AVB-DC -> AVB-LC end point
+
