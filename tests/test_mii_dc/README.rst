@@ -13,4 +13,4 @@ Set-up and usage
 > Use the PC for control messages (they will be forwarded through)
       PC  -> Traffic Generator -> AVB-DC -> AVB-DC -> AVB-LC end point
 
-> Existing AVB python test framework may be used as host controller.
+> Existing AVB python test framework may be used as a host controller.

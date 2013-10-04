@@ -1,11 +1,10 @@
 #include <xs1.h>
+#include <stdint.h>
 #include "xc_utils.h"
 #include "ethernet.h"
 
-void wait(random_generator_t &r, unsigned min, unsigned max)
+unsigned get_delay(random_generator_t &r, unsigned min, unsigned max)
 {
-    timer t;
-    int time;
     int delay = random_get_random_number(r);
     
     if (max != min)
@@ -15,11 +14,33 @@ void wait(random_generator_t &r, unsigned min, unsigned max)
     else
         delay = 0;
 
-    if (delay == 0)
-        return;
+    return delay;
+}
+
+void wait(unsigned delay)
+{
+    timer t;
+    int time;
 
     t :> time;
     t when timerafter(time + delay) :> void;
+}
+
+uintptr_t get_buffer(CHANEND_PARAM(chanend, c_chl))
+{
+	uintptr_t dptr;
+	c_chl :> dptr;
+	return dptr;
+}
+
+void put_buffer(CHANEND_PARAM(chanend, c_chl), uintptr_t dptr)
+{
+	c_chl <: dptr;
+}
+
+void put_buffer_int(CHANEND_PARAM(chanend, c_chl), unsigned val)
+{
+	c_chl <: val;
 }
 
 void send_ether_frame(CHANEND_PARAM(chanend, c_tx), unsigned int txbuf[], unsigned int nbytes)

@@ -9,7 +9,7 @@ TARGET = SLICEKIT-L16
 APP_NAME = test_mii_dc
 
 # The USED_MODULES variable lists other module used by the application.
-USED_MODULES = module_ethernet module_ethernet_board_support module_otp_board_info module_random module_slicekit_support
+USED_MODULES = module_ethernet module_ethernet_board_support module_otp_board_info module_random module_slicekit_support module_xassert
 
 # The flags passed to xcc when building the application
 # You can also set the following to override flags for a particular language:

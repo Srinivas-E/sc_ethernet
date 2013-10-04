@@ -24,6 +24,9 @@
 #include "ethernet_board_support.h"
 #include "random_packets.h"
 #include "xscope.h"
+#include "buffers_conf.h"
+#include "buffer_manager.h"
+#include "packet_transmitter.h"
 
 #if USE_XSCOPE
 void xscope_user_init(void) {
@@ -78,6 +81,7 @@ void app_client(chanend tx, chanend rx)
 int main()
 {
   chan c_rx[1], c_tx[2];
+  chan c_prod[NUM_BUF_PRODUCERS], c_con;
 
   par
   {
@@ -96,7 +100,9 @@ int main()
                                     c_tx, 2);
     }
     on tile[0] : app_client(c_tx[0], c_rx[0]);
-    on tile[0] : random_traffic_generator(c_tx[1]);
+    on tile[0] : random_traffic_generator(c_prod[0]);
+    on tile[0] : buffer_manager(c_prod, NUM_BUF_PRODUCERS, c_con);
+    on tile[0] : packet_transmitter(c_tx[1], c_con);
   }
 
   return 0;
