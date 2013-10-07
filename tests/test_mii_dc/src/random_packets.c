@@ -106,16 +106,33 @@ random_control_t *choose_next(random_generator_t *r, random_control_t **choices)
 #define STW(offset,value) \
   asm volatile("stw %0, %1[%2]"::"r"(value), "r"(dptr), "r"(offset):"memory");
 
-static void fill_pkt_type(unsigned pkt_type, char tx_buf[]) {
-  for (int i = 0; i < 12; i++)
-	  tx_buf[i] = 0xFF;//TODO: fill apropriate type
+#if 0
+/* generate buffer contents of packet->type which represent pkt to transmit */
+static void generate_pkt(unsigned pkt_type) {
+  static unsigned seq_num;
 
+  switch (pkt_type) {
+    case PACKET_TYPE_UNICAST:
+    case PACKET_TYPE_MULTICAST:
+    case PACKET_TYPE_BROADCAST:
+      break;
+  }
+
+  STW(1, 0xFFFFFFFF);
+  STW(2, 0xFFFFFFFF);
+  STW(3, 0xFFFFFFFF);
   /* Set arbitrary ether type */
-  tx_buf[12] = 0x89;//TODO: fill apropriate type
-  tx_buf[13] = 0x12;
+  STW(4,0x89128912);
+  STW(5,seq_num);
+
   /* Generate a packet key */
-  generate_seq_num((unsigned char *) &tx_buf[14]);
+  /*int i,j;
+  for (i=0,j=17; i<4; i++,j--) {
+	STW(j,((seq_num >> i*8) & 0xFF))
+  }*/
+  seq_num++;
 }
+#endif
 
 void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
 {
@@ -124,24 +141,26 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     uintptr_t dptr;
     unsigned len = 0;
     unsigned delay = 0;
-    unsigned mac = 0xFFFFFFFF;
-    unsigned type_snum = 0x8912ABCD;
+    static unsigned seq_num;
 
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {
        	  random_packet_t *packet = choose_packet_type(&r, ptr->packet_types, &len);
-       	  printf("Packet type %d and pkt_len %d\n", packet->type, len);
+       	  //printf("Packet type %d and pkt_len %d\n", packet->type, len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
-       	  STW(0, delay);
-       	  /* generate buffer contents of packet->type and len which represent pkt to transmit */
-       	  STW(1, mac);
-       	  STW(2, mac);
-       	  STW(3, mac);
-       	  STW(4, type_snum);
+       	  STW(0, delay); //add delay to the buffer
+       	  //generate_pkt(packet->type);
+       	  STW(1, 0xFFFFFFFF);
+       	  STW(2, 0xFFFFFFFF);
+       	  STW(3, 0xFFFFFFFF);
+       	  /* Set arbitrary ether type */
+       	  STW(4,0x89128912);
+       	  STW(5,seq_num);
 
        	  put_buffer(c_prod, dptr);
-       	  put_buffer_int(c_prod, len+(1*4)); //add byte count for wait and len values
+       	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
+       	  seq_num++;
         }
         ptr = choose_next(&r, ptr->next);
     }
