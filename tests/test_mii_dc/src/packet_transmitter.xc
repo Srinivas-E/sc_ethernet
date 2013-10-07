@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include "print.h"
 #include "xc_utils.h"
+#include "c_utils.h"
 
 void packet_transmitter(CHANEND_PARAM(chanend, c_tx), CHANEND_PARAM(chanend, c_con))
 {
@@ -18,10 +19,10 @@ void packet_transmitter(CHANEND_PARAM(chanend, c_tx), CHANEND_PARAM(chanend, c_c
       }
 
       asm volatile("ldw %0, %1[%2]":"=r"(delay):"r"(dptr), "r"(0):"memory");
-      wait(delay);
+      //wait(delay);
       /* Increment dptr to point to actual pkt data */
       asm volatile("mov %0, %1":"=r"(dptr):"r"(dptr+4));
-      send_ether_frame(c_tx, (unsigned int *) &dptr, (length_in_bytes-1*4));
+      send_ether_frame(c_tx, dptr, (length_in_bytes-1*4));
 
       /* Release the buffer */
       c_con <: dptr;

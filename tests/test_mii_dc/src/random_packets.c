@@ -141,7 +141,7 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     uintptr_t dptr;
     unsigned len = 0;
     unsigned delay = 0;
-    static unsigned seq_num;
+    static unsigned seq_num = 1;
 
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {

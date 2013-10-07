@@ -42,19 +42,3 @@ void put_buffer_int(CHANEND_PARAM(chanend, c_chl), unsigned val)
 {
 	c_chl <: val;
 }
-
-void send_ether_frame(CHANEND_PARAM(chanend, c_tx), unsigned int txbuf[], unsigned int nbytes)
-{
-    mac_tx(c_tx, txbuf, nbytes, ETH_BROADCAST);
-}
-
-void generate_seq_num(unsigned char tx_buf[])
-{
-  static unsigned seq_num = 0;
-  int j=3;
-  for (int i=0; i<4;i++) {
-    tx_buf[j] = (seq_num >> i*8) & 0xFF ;
-    j--;
-  }
-  seq_num++;
-}
