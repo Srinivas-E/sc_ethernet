@@ -21,11 +21,11 @@ void packet_transmitter(CHANEND_PARAM(chanend, c_tx), CHANEND_PARAM(chanend, c_c
       asm volatile("ldw %0, %1[%2]":"=r"(delay):"r"(dptr), "r"(0):"memory");
       wait(delay);
       /* Increment dptr to point to actual pkt data */
-      asm volatile("mov %0, %1":"=r"(dptr):"r"(dptr+4));
-      send_ether_frame(c_tx, dptr, (length_in_bytes-1*4));
+      //asm volatile("mov %0, %1":"=r"(dptr):"r"(dptr+4));
+      send_ether_frame(c_tx, dptr+4, (length_in_bytes-1*4));
 
       /* Release the buffer */
       c_con <: dptr;
-      printf("Tx: pkt_len: %u\n", length_in_bytes);
+      //printf("Tx: pkt_len: %u\n", length_in_bytes);
     }
 }

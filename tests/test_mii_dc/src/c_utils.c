@@ -6,9 +6,5 @@
 
 void send_ether_frame(CHANEND_PARAM(chanend, c_tx), uintptr_t dptr, unsigned int nbytes)
 {
-	int i=0;
-	if (i = (nbytes%4))
-		nbytes -=i ;
-
 	mac_tx(c_tx, (unsigned int *)dptr, nbytes, ETH_BROADCAST);
 }

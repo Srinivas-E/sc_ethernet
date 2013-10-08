@@ -55,7 +55,7 @@ on tile[1]: mii_interface_t mii2 = {
   XS1_PORT_4B
 };
 
-void app_client(chanend tx, chanend rx)
+void eth_client(chanend tx, chanend rx)
 {
   unsigned int rxbuf[1600/4];
   unsigned int src_port;
@@ -70,7 +70,7 @@ void app_client(chanend tx, chanend rx)
   {
     select {
       case mac_rx(rx, (rxbuf,char[]), nbytes, src_port):
-        printf("Received Packet of length %d and src port: %d \n", nbytes, src_port);
+        //printf("Received Packet of length %d and src port: %d \n", nbytes, src_port);
         mac_tx(tx, rxbuf, nbytes, ETH_BROADCAST);
       break;
 	}
@@ -99,7 +99,7 @@ int main()
                                     c_rx, 1,
                                     c_tx, 2);
     }
-    on tile[0] : app_client(c_tx[0], c_rx[0]);
+    on tile[0] : eth_client(c_tx[0], c_rx[0]);
     on tile[0] : random_traffic_generator(c_prod[0]);
     on tile[0] : buffer_manager(c_prod, NUM_BUF_PRODUCERS, c_con);
     on tile[0] : packet_transmitter(c_tx[1], c_con);

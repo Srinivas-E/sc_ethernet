@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "stdint.h"
 #include "xc_utils.h"
+#include "debug_print.h"
 
 typedef enum {
     PACKET_TYPE_UNICAST,
@@ -37,9 +38,10 @@ random_control_t broadcast_only;
 random_control_t unicast_only;
 
 random_control_t *choice[] = { &unicast_only, &broadcast_only, NULL };
-
+#define DELAY_FACTOR	10
 random_control_t initial = {
-    10000000, 40000000, packet_type_all, 1, 10, choice
+    //10000000/DELAY_FACTOR, 40000000/DELAY_FACTOR, packet_type_all, 1, 10, choice
+	0, 0, packet_type_all, 1, 10, choice
 };
 
 random_control_t *choice_initial[] = { &initial, NULL };
@@ -70,7 +72,7 @@ random_packet_t *choose_packet_type(random_generator_t *r, random_packet_t **cho
       if (choice_weight < cum_weight) {
     	/* Choose packet length */
     	*len = random_get_random_number(r);
-    	*len = *len % ((*ptr)->size_max - (*ptr)->size_min);
+    	*len = (*len % ((*ptr)->size_max - (*ptr)->size_min)) + (*ptr)->size_min ;
     	return *ptr;
       }
       ptr++;
@@ -149,7 +151,7 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {
        	  random_packet_t *packet = choose_packet_type(&r, ptr->packet_types, &len);
-       	  printf("Packet type %d and pkt_len %d\n", packet->type, len);
+       	  //debug_printf("Packet type %d and pkt_len %d\n", packet->type, len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
        	  STW(0, delay); //add delay to the buffer
