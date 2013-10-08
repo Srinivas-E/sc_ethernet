@@ -27,6 +27,14 @@ typedef struct random_control_t {
     struct random_control_t **next;
 } random_control_t;
 
+typedef struct packet_data_t {
+  unsigned delay;
+  char dest_mac[6];
+  char src_mac[6];
+  char frame_type[2];
+  char seq_num[4];
+} packet_data_t;
+
 random_packet_t unicast = { PACKET_TYPE_UNICAST, 64, 1500, 10 };
 random_packet_t multicast = { PACKET_TYPE_MULTICAST, 64, 1500, 2 };
 random_packet_t broadcast = { PACKET_TYPE_BROADCAST, 64, 1500, 2 };
@@ -38,10 +46,10 @@ random_control_t broadcast_only;
 random_control_t unicast_only;
 
 random_control_t *choice[] = { &unicast_only, &broadcast_only, NULL };
-#define DELAY_FACTOR	10
+#define DELAY_FACTOR	1000
 random_control_t initial = {
-    //10000000/DELAY_FACTOR, 40000000/DELAY_FACTOR, packet_type_all, 1, 10, choice
-	0, 0, packet_type_all, 1, 10, choice
+    10000000/DELAY_FACTOR, 40000000/DELAY_FACTOR, packet_type_all, 1, 10, choice
+	//0, 0, packet_type_all, 1, 10, choice
 };
 
 random_control_t *choice_initial[] = { &initial, NULL };
@@ -105,39 +113,30 @@ random_control_t *choose_next(random_generator_t *r, random_control_t **choices)
     return NULL;
 }
 
-#define STW(offset,value) \
-  asm volatile("stw %0, %1[%2]"::"r"(value), "r"(dptr), "r"(offset):"memory");
-
-#define ST8(offset,value) \
-  asm volatile("st8 %0, %1[%2]"::"r"(value), "r"(dptr), "r"(offset):"memory");
-
-#if 0
 /* generate buffer contents of packet->type which represent pkt to transmit */
-static void generate_pkt(unsigned pkt_type) {
-  static unsigned seq_num;
+static void generate_pkt(packet_data_t *pkt_dptr, unsigned pkt_type, unsigned delay) {
+  static unsigned seq_num = 1;
 
+  pkt_dptr->delay = delay;
   switch (pkt_type) {
     case PACKET_TYPE_UNICAST:
     case PACKET_TYPE_MULTICAST:
     case PACKET_TYPE_BROADCAST:
+      for (int i=0;i<6;i++) {
+    	pkt_dptr->dest_mac[i] = 0xFF;
+    	pkt_dptr->src_mac[i] = 0xFF;
+      }
       break;
   }
 
-  STW(1, 0xFFFFFFFF);
-  STW(2, 0xFFFFFFFF);
-  STW(3, 0xFFFFFFFF);
-  /* Set arbitrary ether type */
-  STW(4,0x89128912);
-  STW(5,seq_num);
-
-  /* Generate a packet key */
-  /*int i,j;
-  for (i=0,j=17; i<4; i++,j--) {
-	STW(j,((seq_num >> i*8) & 0xFF))
-  }*/
+  pkt_dptr->frame_type[0] = 0x89;
+  pkt_dptr->frame_type[1] = 0x32;
+  pkt_dptr->seq_num[3] = seq_num & 0xFF;
+  pkt_dptr->seq_num[2] = (seq_num >> 8) & 0xFF;
+  pkt_dptr->seq_num[1] = (seq_num >> 16) & 0xFF;
+  pkt_dptr->seq_num[0] = (seq_num >> 24) & 0xFF;
   seq_num++;
 }
-#endif
 
 void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
 {
@@ -146,7 +145,6 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     uintptr_t dptr;
     unsigned len = 0;
     unsigned delay = 0;
-    static unsigned seq_num = 1;
 
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {
@@ -154,26 +152,9 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
        	  //debug_printf("Packet type %d and pkt_len %d\n", packet->type, len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
-       	  STW(0, delay); //add delay to the buffer
-       	  //generate_pkt(packet->type);
-       	  STW(1, 0xFFFFFFFF);
-       	  STW(2, 0xFFFFFFFF);
-       	  STW(3, 0xFFFFFFFF);
-       	  /* Set arbitrary ether type */
-       	  STW(4,0x8912);
-       	  //STW(5,seq_num);
-       	  int temp = seq_num >> (0*8) & 0xFF;
-       	  ST8(23,temp);
-       	  temp = seq_num >> (1*8) & 0xFF;
-       	  ST8(22,temp);
-       	  temp = seq_num >> (2*8) & 0xFF;
-       	  ST8(21,temp);
-       	  temp = seq_num >> (3*8) & 0xFF;
-       	  ST8(20,temp);
-
+       	  generate_pkt((packet_data_t *)dptr, packet->type, delay);
        	  put_buffer(c_prod, dptr);
        	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
-       	  seq_num++;
         }
         ptr = choose_next(&r, ptr->next);
     }
