@@ -106,6 +106,9 @@ random_control_t *choose_next(random_generator_t *r, random_control_t **choices)
 #define STW(offset,value) \
   asm volatile("stw %0, %1[%2]"::"r"(value), "r"(dptr), "r"(offset):"memory");
 
+#define ST8(offset,value) \
+  asm volatile("st8 %0, %1[%2]"::"r"(value), "r"(dptr), "r"(offset):"memory");
+
 #if 0
 /* generate buffer contents of packet->type which represent pkt to transmit */
 static void generate_pkt(unsigned pkt_type) {
@@ -146,7 +149,7 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {
        	  random_packet_t *packet = choose_packet_type(&r, ptr->packet_types, &len);
-       	  //printf("Packet type %d and pkt_len %d\n", packet->type, len);
+       	  printf("Packet type %d and pkt_len %d\n", packet->type, len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
        	  STW(0, delay); //add delay to the buffer
@@ -155,8 +158,16 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
        	  STW(2, 0xFFFFFFFF);
        	  STW(3, 0xFFFFFFFF);
        	  /* Set arbitrary ether type */
-       	  STW(4,0x89128912);
-       	  STW(5,seq_num);
+       	  STW(4,0x8912);
+       	  //STW(5,seq_num);
+       	  int temp = seq_num >> (0*8) & 0xFF;
+       	  ST8(23,temp);
+       	  temp = seq_num >> (1*8) & 0xFF;
+       	  ST8(22,temp);
+       	  temp = seq_num >> (2*8) & 0xFF;
+       	  ST8(21,temp);
+       	  temp = seq_num >> (3*8) & 0xFF;
+       	  ST8(20,temp);
 
        	  put_buffer(c_prod, dptr);
        	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
