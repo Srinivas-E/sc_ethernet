@@ -172,7 +172,7 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {
        	  random_packet_t *packet = choose_packet_type(&r, ptr->packet_types, &len);
-       	  //debug_printf("Packet type %d and pkt_len %d\n", packet->type, len);
+       	  //debug_printf("Packet len %d\n", len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
        	  packet->p_gen_packet((packet_data_t *)dptr, &delay);

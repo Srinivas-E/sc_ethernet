@@ -28,12 +28,10 @@
 #include "buffer_manager.h"
 #include "packet_transmitter.h"
 
-#if USE_XSCOPE
 void xscope_user_init(void) {
   xscope_register(0);
   xscope_config_io(XSCOPE_IO_BASIC);
 }
-#endif
 
 on ETHERNET_DEFAULT_TILE: otp_ports_t otp_ports = OTP_PORTS_INITIALIZER;
 
