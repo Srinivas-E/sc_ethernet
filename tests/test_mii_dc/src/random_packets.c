@@ -42,9 +42,9 @@ static void fill_pkt_hdr(packet_data_t *pkt_dptr)
   seq_num++;
 }
 
-static void gen_unicast_frame(packet_data_t *pkt_dptr, unsigned *delay)
+static void gen_unicast_frame(packet_data_t *pkt_dptr, unsigned delay)
 {
-  pkt_dptr->delay = *delay;
+  pkt_dptr->delay = delay;
   for (int i=0;i<6;i++) {
 	pkt_dptr->dest_mac[i] = unicast_mac[i];
 	pkt_dptr->src_mac[i] = 0xFF;
@@ -54,9 +54,9 @@ static void gen_unicast_frame(packet_data_t *pkt_dptr, unsigned *delay)
   fill_pkt_hdr(pkt_dptr);
 }
 
-static void gen_multicast_frame(packet_data_t *pkt_dptr, unsigned *delay)
+static void gen_multicast_frame(packet_data_t *pkt_dptr, unsigned delay)
 {
-  pkt_dptr->delay = *delay;
+  pkt_dptr->delay = delay;
   for (int i=0;i<6;i++) {
 	pkt_dptr->dest_mac[i] = multicast_mac[i];
 	pkt_dptr->src_mac[i] = 0xFF;
@@ -66,9 +66,9 @@ static void gen_multicast_frame(packet_data_t *pkt_dptr, unsigned *delay)
   fill_pkt_hdr(pkt_dptr);
 }
 
-static void gen_broadcast_frame(packet_data_t *pkt_dptr, unsigned *delay)
+static void gen_broadcast_frame(packet_data_t *pkt_dptr, unsigned delay)
 {
-  pkt_dptr->delay = *delay;
+  pkt_dptr->delay = delay;
   for (int i=0;i<6;i++) {
 	pkt_dptr->dest_mac[i] = 0xFF;
 	pkt_dptr->src_mac[i] = 0xFF;
@@ -160,7 +160,7 @@ random_control_t *choose_next(random_generator_t *r, random_control_t **choices)
     return NULL;
 }
 
-#pragma stackfunction 1500
+#pragma stackfunction 100
 void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
 {
     random_control_t *ptr = &initial;
@@ -175,8 +175,7 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
        	  //debug_printf("Packet len %d\n", len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
-       	  packet->p_gen_packet((packet_data_t *)dptr, &delay);
-       	  //generate_pkt((packet_data_t *)dptr, delay);
+       	  packet->p_gen_packet((packet_data_t *)dptr, delay);
        	  put_buffer(c_prod, dptr);
        	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
         }
