@@ -4,14 +4,11 @@
 #include "xc_utils.h"
 #include "debug_print.h"
 
-typedef enum {
-    PACKET_TYPE_UNICAST,
-    PACKET_TYPE_MULTICAST,
-    PACKET_TYPE_BROADCAST,
-} packet_type_t;
-    
+char unicast_mac[6] = {0x00, 0x22, 0x97, 0x00, 0x42, 0xa6 };
+char multicast_mac[6] = {0x01, 0x22, 0x97, 0x00, 0x42, 0xa6 };
+
 typedef struct random_packet_t {
-    packet_type_t type;
+    void (*p_gen_packet)();
     unsigned int size_min;
     unsigned int size_max;
     int weight;
@@ -35,18 +32,66 @@ typedef struct packet_data_t {
   char seq_num[4];
 } packet_data_t;
 
-random_packet_t unicast = { PACKET_TYPE_UNICAST, 64, 1500, 10 };
-random_packet_t multicast = { PACKET_TYPE_MULTICAST, 64, 1500, 2 };
-random_packet_t broadcast = { PACKET_TYPE_BROADCAST, 64, 1500, 2 };
+static void fill_pkt_hdr(packet_data_t *pkt_dptr)
+{
+  static unsigned seq_num = 1;
+  pkt_dptr->seq_num[3] = seq_num & 0xFF;
+  pkt_dptr->seq_num[2] = (seq_num >> 8) & 0xFF;
+  pkt_dptr->seq_num[1] = (seq_num >> 16) & 0xFF;
+  pkt_dptr->seq_num[0] = (seq_num >> 24) & 0xFF;
+  seq_num++;
+}
+
+static void gen_unicast_frame(packet_data_t *pkt_dptr, unsigned *delay)
+{
+  pkt_dptr->delay = *delay;
+  for (int i=0;i<6;i++) {
+	pkt_dptr->dest_mac[i] = unicast_mac[i];
+	pkt_dptr->src_mac[i] = 0xFF;
+  }
+  pkt_dptr->frame_type[0] = 0x89;
+  pkt_dptr->frame_type[1] = 0x32;
+  fill_pkt_hdr(pkt_dptr);
+}
+
+static void gen_multicast_frame(packet_data_t *pkt_dptr, unsigned *delay)
+{
+  pkt_dptr->delay = *delay;
+  for (int i=0;i<6;i++) {
+	pkt_dptr->dest_mac[i] = multicast_mac[i];
+	pkt_dptr->src_mac[i] = 0xFF;
+  }
+  pkt_dptr->frame_type[0] = 0x89;
+  pkt_dptr->frame_type[1] = 0x33;
+  fill_pkt_hdr(pkt_dptr);
+}
+
+static void gen_broadcast_frame(packet_data_t *pkt_dptr, unsigned *delay)
+{
+  pkt_dptr->delay = *delay;
+  for (int i=0;i<6;i++) {
+	pkt_dptr->dest_mac[i] = 0xFF;
+	pkt_dptr->src_mac[i] = 0xFF;
+  }
+  pkt_dptr->frame_type[0] = 0x89;
+  pkt_dptr->frame_type[1] = 0x34;
+  fill_pkt_hdr(pkt_dptr);
+}
+
+random_packet_t unicast = { &gen_unicast_frame, 64, 1500, 10 };
+random_packet_t multicast = { &gen_multicast_frame, 64, 1500, 2 };
+random_packet_t broadcast = { &gen_broadcast_frame, 64, 1500, 2 };
 random_packet_t *packet_type_all[] = { &unicast, &multicast, &broadcast, NULL };
 random_packet_t *packet_type_broadcast[] = { &broadcast, NULL };
+random_packet_t *packet_type_multicast[] = { &multicast, NULL };
 random_packet_t *packet_type_unicast[] = { &unicast, NULL };
 
 random_control_t broadcast_only;
+random_control_t multicast_only;
 random_control_t unicast_only;
 
-random_control_t *choice[] = { &unicast_only, &broadcast_only, NULL };
-#define DELAY_FACTOR	1000
+random_control_t *choice[] = { &unicast_only, &multicast_only, &broadcast_only, NULL };
+#define DELAY_FACTOR	2000
 random_control_t initial = {
     10000000/DELAY_FACTOR, 40000000/DELAY_FACTOR, packet_type_all, 1, 10, choice
 	//0, 0, packet_type_all, 1, 10, choice
@@ -60,6 +105,10 @@ random_control_t broadcast_only = {
 
 random_control_t unicast_only = {
     0, 0, packet_type_unicast, 6, 3, choice_initial
+};
+
+random_control_t multicast_only = {
+    0, 0, packet_type_multicast, 6, 3, choice_initial
 };
 
 random_packet_t *choose_packet_type(random_generator_t *r, random_packet_t **choices, unsigned int *len)
@@ -84,7 +133,6 @@ random_packet_t *choose_packet_type(random_generator_t *r, random_packet_t **cho
     	return *ptr;
       }
       ptr++;
-      //choice_weight -= (*ptr)->weight;
     }
     *len = 0;
     return NULL;
@@ -108,36 +156,11 @@ random_control_t *choose_next(random_generator_t *r, random_control_t **choices)
         if (choice_weight < cum_weight)
             return *ptr;
         ptr++;
-        //choice_weight -= (*ptr)->weight;
     }
     return NULL;
 }
 
-/* generate buffer contents of packet->type which represent pkt to transmit */
-static void generate_pkt(packet_data_t *pkt_dptr, unsigned pkt_type, unsigned delay) {
-  static unsigned seq_num = 1;
-
-  pkt_dptr->delay = delay;
-  switch (pkt_type) {
-    case PACKET_TYPE_UNICAST:
-    case PACKET_TYPE_MULTICAST:
-    case PACKET_TYPE_BROADCAST:
-      for (int i=0;i<6;i++) {
-    	pkt_dptr->dest_mac[i] = 0xFF;
-    	pkt_dptr->src_mac[i] = 0xFF;
-      }
-      break;
-  }
-
-  pkt_dptr->frame_type[0] = 0x89;
-  pkt_dptr->frame_type[1] = 0x32;
-  pkt_dptr->seq_num[3] = seq_num & 0xFF;
-  pkt_dptr->seq_num[2] = (seq_num >> 8) & 0xFF;
-  pkt_dptr->seq_num[1] = (seq_num >> 16) & 0xFF;
-  pkt_dptr->seq_num[0] = (seq_num >> 24) & 0xFF;
-  seq_num++;
-}
-
+#pragma stackfunction 1500
 void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
 {
     random_control_t *ptr = &initial;
@@ -152,7 +175,8 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
        	  //debug_printf("Packet type %d and pkt_len %d\n", packet->type, len);
        	  dptr = get_buffer(c_prod);
        	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
-       	  generate_pkt((packet_data_t *)dptr, packet->type, delay);
+       	  packet->p_gen_packet((packet_data_t *)dptr, &delay);
+       	  //generate_pkt((packet_data_t *)dptr, delay);
        	  put_buffer(c_prod, dptr);
        	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
         }
