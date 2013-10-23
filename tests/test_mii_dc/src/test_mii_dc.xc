@@ -27,6 +27,8 @@
 #include "buffers_conf.h"
 #include "buffer_manager.h"
 #include "packet_transmitter.h"
+#include "traffic_generator.h"
+
 
 void xscope_user_init(void) {
   xscope_register(0);
@@ -101,6 +103,7 @@ int main()
     on tile[0] : random_traffic_generator(c_prod[0]);
     on tile[0] : buffer_manager(c_prod, NUM_BUF_PRODUCERS, c_con);
     on tile[0] : packet_transmitter(c_tx[1], c_con);
+    on tile[0] : xscope_listener();
   }
 
   return 0;

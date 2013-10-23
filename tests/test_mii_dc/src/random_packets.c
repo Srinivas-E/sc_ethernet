@@ -3,9 +3,15 @@
 #include "stdint.h"
 #include "xc_utils.h"
 #include "debug_print.h"
+#include "traffic_generator.h"
 
 char unicast_mac[6] = {0x00, 0x22, 0x97, 0x00, 0x42, 0xa6 };
 char multicast_mac[6] = {0x01, 0x22, 0x97, 0x00, 0x42, 0xa6 };
+
+typedef enum {
+  GENERATOR_RANDOM,
+  GENERATOR_DIRECTED,
+} generator_mode_t;
 
 typedef struct random_packet_t {
     void (*p_gen_packet)();
@@ -78,9 +84,18 @@ static void gen_broadcast_frame(packet_data_t *pkt_dptr, unsigned delay)
   fill_pkt_hdr(pkt_dptr);
 }
 
-random_packet_t unicast = { &gen_unicast_frame, 64, 1500, 10 };
-random_packet_t multicast = { &gen_multicast_frame, 64, 1500, 2 };
-random_packet_t broadcast = { &gen_broadcast_frame, 64, 1500, 2 };
+generator_mode_t run_mode;
+#if 1
+random_packet_t unicast = { &gen_unicast_frame, 64, 1500, 5 };
+random_packet_t multicast = { &gen_multicast_frame, 64, 1500, 0 };
+random_packet_t broadcast = { &gen_broadcast_frame, 64, 1500, 90 };
+#else
+random_packet_t unicast = { &gen_unicast_frame, 1499, 1500, 10 };
+random_packet_t multicast = { &gen_multicast_frame, 1499, 1500, 2 };
+random_packet_t broadcast = { &gen_broadcast_frame, 1499, 1500, 2 };
+#endif
+
+random_packet_t *packet_type_none[] = { NULL };
 random_packet_t *packet_type_all[] = { &unicast, &multicast, &broadcast, NULL };
 random_packet_t *packet_type_broadcast[] = { &broadcast, NULL };
 random_packet_t *packet_type_multicast[] = { &multicast, NULL };
@@ -91,24 +106,24 @@ random_control_t multicast_only;
 random_control_t unicast_only;
 
 random_control_t *choice[] = { &unicast_only, &multicast_only, &broadcast_only, NULL };
-#define DELAY_FACTOR	2000
+
 random_control_t initial = {
-    10000000/DELAY_FACTOR, 40000000/DELAY_FACTOR, packet_type_all, 1, 10, choice
 	//0, 0, packet_type_all, 1, 10, choice
+	0, 0, packet_type_none, 1, 1, choice
 };
 
 random_control_t *choice_initial[] = { &initial, NULL };
 
 random_control_t broadcast_only = {
-    0, 0, packet_type_broadcast, 10, 5, choice_initial
+    0, 0, packet_type_broadcast, 1, 1, choice_initial
 };
 
 random_control_t unicast_only = {
-    0, 0, packet_type_unicast, 6, 3, choice_initial
+    0, 0, packet_type_unicast, 1, 1, choice_initial
 };
 
 random_control_t multicast_only = {
-    0, 0, packet_type_multicast, 6, 3, choice_initial
+    0, 0, packet_type_multicast, 1, 1, choice_initial
 };
 
 random_packet_t *choose_packet_type(random_generator_t *r, random_packet_t **choices, unsigned int *len)
@@ -129,7 +144,10 @@ random_packet_t *choose_packet_type(random_generator_t *r, random_packet_t **cho
       if (choice_weight < cum_weight) {
     	/* Choose packet length */
     	*len = random_get_random_number(r);
-    	*len = (*len % ((*ptr)->size_max - (*ptr)->size_min)) + (*ptr)->size_min ;
+        if ((*ptr)->size_max == (*ptr)->size_min)
+          *len = (*ptr)->size_min;
+        else
+          *len = (*len % ((*ptr)->size_max - (*ptr)->size_min)) + (*ptr)->size_min ;
     	return *ptr;
       }
       ptr++;
@@ -172,14 +190,51 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
     while (1) {
     	for (int i = 0; i < ptr->repeat; i++) {
        	  random_packet_t *packet = choose_packet_type(&r, ptr->packet_types, &len);
-       	  //debug_printf("Packet len %d\n", len);
-       	  dptr = get_buffer(c_prod);
-       	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
-       	  packet->p_gen_packet((packet_data_t *)dptr, delay);
-       	  put_buffer(c_prod, dptr);
-       	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
+       	  if (packet) {
+           	  //debug_printf("Packet len %d\n", len);
+           	  dptr = get_buffer(c_prod);
+           	  delay = get_delay(&r, ptr->delay_min, ptr->delay_max);
+           	  packet->p_gen_packet((packet_data_t *)dptr, delay);
+           	  put_buffer(c_prod, dptr);
+           	  put_buffer_int(c_prod, len+(1*4)); //add byte count for delay value
+       	  }
         }
-        ptr = choose_next(&r, ptr->next);
+    	/* check if there is any host request */
+    	if (get_pending_service_status()) {
+          //populate random_control_t obtained from the host
+    	  //ptr = &initial;
+    	  pkt_control_t *ctrl_ptr = NULL;
+    	  get_control_commands((uintptr_t *) &ctrl_ptr);
+
+    	  initial.delay_min = 0;
+    	  initial.delay_max = ctrl_ptr->rate;
+
+    	  unicast.size_min = ctrl_ptr->ucast.size-1;
+    	  unicast.size_max = ctrl_ptr->ucast.size;
+    	  unicast.weight = ctrl_ptr->ucast.weight;
+
+    	  multicast.size_min = ctrl_ptr->mcast.size-1;
+    	  multicast.size_max = ctrl_ptr->mcast.size;
+    	  multicast.weight = ctrl_ptr->mcast.weight;
+
+    	  broadcast.size_min = ctrl_ptr->bcast.size-1;
+    	  broadcast.size_max = ctrl_ptr->bcast.size;
+    	  broadcast.weight = ctrl_ptr->bcast.weight;
+/*
+          debug_printf("ctrl_ptr->mode: %d\n", ctrl_ptr->mode);
+          debug_printf("ctrl_ptr->rate: %d\n", ctrl_ptr->rate);
+          debug_printf("ctrl_ptr->bcast.size: %d\n", ctrl_ptr->bcast.size);
+          debug_printf("ctrl_ptr->bcast.weight: %d\n", ctrl_ptr->bcast.weight);
+          debug_printf("ctrl_ptr->mcast.size: %d\n", ctrl_ptr->mcast.size);
+          debug_printf("ctrl_ptr->mcast.weight: %d\n", ctrl_ptr->mcast.weight);
+          debug_printf("ctrl_ptr->ucast.size: %d\n", ctrl_ptr->ucast.size);
+          debug_printf("ctrl_ptr->ucast.weight: %d\n", ctrl_ptr->ucast.weight);
+*/
+    	  reset_pending_service_status();
+    	  ctrl_ptr = NULL;
+    	}
+    	else
+          ptr = choose_next(&r, ptr->next);
     }
 }
 
