@@ -55,7 +55,6 @@ void xscope_listener()
               set_generator_mode(GENERATOR_DIRECTED);
        	      break;
           }
-       	  debug_printf("Buffer data %s with bytes: %d\n", buffer, bytes_read);
         break;
 
         case PKT_CONTROL:
@@ -75,15 +74,10 @@ void xscope_listener()
           set_packet_control(&pkt_ctrl, pkt_type);
           index += 2;
           pkt_ctrl->weight = convert_atoi_substr(buffer+index, &len, bytes_read-2) % 100;
-          debug_printf("pkt_ctrl->weight: %d\n", pkt_ctrl->weight);
           index += len+1; //+1 for white space
           pkt_ctrl->size_min = convert_atoi_substr(buffer+index, &len, bytes_read-2) % 1500;
-          debug_printf("pkt_ctrl->size_min: %d\n", pkt_ctrl->size_min);
           index += len+1; //+1 for white space
           pkt_ctrl->size_max = convert_atoi_substr(buffer+index, &len, bytes_read-2) % 1500;
-          debug_printf("pkt_ctrl->size_max: %d\n", pkt_ctrl->size_max);
-
-          debug_printf("Buffer data %s with bytes: %d\n", buffer, bytes_read);
         }
         break;
 
@@ -104,12 +98,8 @@ void xscope_listener()
           set_packet_generation_control(&pkt_gen_ctrl, pkt_type);
           index += 2;
           pkt_gen_ctrl->weight = convert_atoi_substr(buffer+index, &len, bytes_read-2) % 100;
-          debug_printf("pkt_gen_ctrl->weight: %d\n", pkt_gen_ctrl->weight);
           index += len+1; //+1 for white space
           pkt_gen_ctrl->delay_max = convert_atoi_substr(buffer+index, &len, bytes_read-2) % 100;
-          debug_printf("pkt_gen_ctrl->delay_max: %d\n", pkt_gen_ctrl->delay_max);
-
-          debug_printf("Buffer data %s with bytes: %d\n", buffer, bytes_read);
         }
         break;
 
@@ -150,14 +140,11 @@ void xscope_listener()
           set_packet_generation_control(&pkt_gen_ctrl, TYPE_BROADCAST);
           debug_printf("Broadcast  control weight: %d\n", pkt_gen_ctrl->weight);
           debug_printf("Broadcast  control delay_max: %d\n", pkt_gen_ctrl->delay_max);
-
-          debug_printf("Buffer data %s with bytes: %d\n", buffer, bytes_read);
         }
         break;
 
         case END_OF_CMD:
           pending_service = 1;
-          debug_printf("Buffer data %s with bytes: %d\n", buffer, bytes_read);
         break;
 
         default:
