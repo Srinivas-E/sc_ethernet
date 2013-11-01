@@ -1,7 +1,10 @@
 #include <stddef.h>
 #include <stdio.h>
-#include "stdint.h"
+#include <xccompat.h>
+#include <stdint.h>
 #include "print.h"
+#include "common.h"
+#include "random.h"
 #include "xc_utils.h"
 #include "c_utils.h"
 

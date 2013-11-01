@@ -1,8 +1,6 @@
 #ifndef COMMON_H_
 #define COMMON_H_
 
-#include <xccompat.h>
-
 #ifdef __XC__
 #define CHANEND_PARAM(param, name) param name
 #else

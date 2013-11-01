@@ -1,5 +1,8 @@
 #include <xs1.h>
 #include <stdint.h>
+#include <xccompat.h>
+#include "common.h"
+#include "random.h"
 #include "xc_utils.h"
 #include "ethernet.h"
 

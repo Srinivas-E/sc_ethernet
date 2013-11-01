@@ -22,12 +22,12 @@
 #include "otp_board_info.h"
 #include "ethernet.h"
 #include "ethernet_board_support.h"
-#include "random_packets.h"
+#include "packet_generator.h"
 #include "xscope.h"
 #include "buffers_conf.h"
 #include "buffer_manager.h"
 #include "packet_transmitter.h"
-#include "traffic_generator.h"
+#include "packet_controller.h"
 
 
 void xscope_user_init(void) {

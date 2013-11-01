@@ -1,9 +1,8 @@
 #ifndef __XC_UTILS_H__
 #define __XC_UTILS_H__
 
-#include <xccompat.h>
-#include "random.h"
-#include "common.h"
+//#include "random.h"
+//#include "common.h"
 
 void wait(unsigned delay);
 unsigned get_delay(REFERENCE_PARAM(random_generator_t, r), unsigned min, unsigned max);

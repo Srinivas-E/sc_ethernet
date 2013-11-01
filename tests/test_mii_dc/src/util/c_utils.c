@@ -3,19 +3,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <xccompat.h>
 
 #include "common.h"
 #include "c_utils.h"
 #include "ethernet.h"
 #include "debug_print.h"
-#include "traffic_generator.h"
+#include "packet_controller.h"
 
 void send_ether_frame(CHANEND_PARAM(chanend, c_tx), uintptr_t dptr, unsigned int nbytes)
 {
 	mac_tx(c_tx, (unsigned int *)dptr, nbytes, ETH_BROADCAST);
 }
 
-/* This function converts an ascii  string to integer and returns its string length */
+/* This function converts an ascii string to an integer and returns its string length */
 int convert_atoi_substr(char buffer[], unsigned len[], unsigned bytes_len)
 {
   char *ptr = buffer;
@@ -32,7 +33,8 @@ int convert_atoi_substr(char buffer[], unsigned len[], unsigned bytes_len)
   }
 
   *len = j;
-  buffer[bytes_len] = '\0';
+  //buffer[bytes_len] = '\0';
+  *ptr = '\0';
   return (atoi(&buffer[i]));
 }
 
