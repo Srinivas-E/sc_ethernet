@@ -257,10 +257,14 @@ void random_traffic_generator(CHANEND_PARAM(chanend, c_prod))
         dptr = get_buffer(c_prod);
 
         // The value can overflow if multiplying large packet lengths by maximum delay
+        const int ifg_bytes = 96/8;
+        const int preamble_bytes = 8;
+        const int crc_bytes = 4;
+        int bits_on_wire = (len + ifg_bytes + preamble_bytes + crc_bytes) * 8;
         if (rate_factor >= (1 << bit_pos))
-          delay = (len * (rate_factor >> bit_pos));
+          delay = bits_on_wire * (rate_factor >> bit_pos);
         else
-          delay = ((len << bit_pos) * rate_factor) >> bit_pos;
+          delay = (bits_on_wire * rate_factor) >> bit_pos;
 
         ((packet_data_t *)dptr)->delay = delay;
 
