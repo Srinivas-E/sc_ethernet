@@ -73,18 +73,50 @@ void eth_client(chanend tx, chanend rx)
         //printf("Received Packet of length %d and src port: %d \n", nbytes, src_port);
         mac_tx(tx, rxbuf, nbytes, ETH_BROADCAST);
       break;
-	}
+    }
   }
 }
 
+// The maximum read size is 256 bytes
+#define MAX_BYTES_READ 256
+#define MAX_WORDS_READ (MAX_BYTES_READ / 4)
+
+void xscope_listener(chanend c_host_data)
+{
+  unsigned int buffer[MAX_WORDS_READ];
+
+  for (int i = 0; i < MAX_WORDS_READ; i++)
+    buffer[i] = 0;
+
+  xscope_connect_data_from_host(c_host_data);
+
+  while (1) {
+    int bytes_read = 0;
+
+    select {
+      case xscope_data_from_host(c_host_data, (unsigned char *)buffer, bytes_read):
+        if (bytes_read) {
+          handle_host_data((unsigned char *)buffer, bytes_read);
+
+          // Clear buffer after use
+          for (int i = 0; i < (bytes_read + 3)/4; i++)
+            buffer[i] = 0;
+        }
+        break;
+    }
+  }
+}
 
 int main()
 {
   chan c_rx[1], c_tx[2];
   chan c_prod[NUM_BUF_PRODUCERS], c_con;
+  chan c_host_data;
 
   par
   {
+    xscope_host_data(c_host_data);
+
     on ETHERNET_DEFAULT_TILE:
     {
       char mac_address[6];
@@ -103,7 +135,7 @@ int main()
     on tile[0] : random_traffic_generator(c_prod[0]);
     on tile[0] : buffer_manager(c_prod, NUM_BUF_PRODUCERS, c_con);
     on tile[0] : packet_transmitter(c_tx[1], c_con);
-    on tile[0] : xscope_listener();
+    on tile[0] : xscope_listener(c_host_data);
   }
 
   return 0;

@@ -22,6 +22,9 @@ unsigned get_delay(random_generator_t &r, unsigned min, unsigned max)
 
 void wait(unsigned delay)
 {
+    if (delay == 0)
+        return;
+
     timer t;
     int time;
 

@@ -13,61 +13,35 @@
 
 void send_ether_frame(CHANEND_PARAM(chanend, c_tx), uintptr_t dptr, unsigned int nbytes)
 {
-	mac_tx(c_tx, (unsigned int *)dptr, nbytes, ETH_BROADCAST);
+  mac_tx(c_tx, (unsigned int *)dptr, nbytes, ETH_BROADCAST);
 }
 
-/* This function converts an ascii string to an integer and returns its string length */
-int convert_atoi_substr(char buffer[], unsigned len[], unsigned bytes_len)
+char get_next_char(const unsigned char **buffer)
 {
-  char *ptr = buffer;
-  int i=0, j=0;
-  while (*ptr && isspace(*ptr)) {
-	ptr++;
-	i++;
-  }
+  const unsigned char *ptr = *buffer;
+  while (*ptr && isspace(*ptr))
+    ptr++;
 
-  ptr = buffer;
-  while (*ptr && !isspace(*ptr)) {
-	ptr++;
-	j++;
-  }
-
-  *len = j;
-  //buffer[bytes_len] = '\0';
-  *ptr = '\0';
-  return (atoi(&buffer[i]));
+  *buffer = ptr + 1;
+  return *ptr;
 }
 
-#if 0
-unsigned get_line_rate(char buffer[])
+int convert_atoi_substr(const unsigned char **buffer)
 {
-  unsigned line_rate = 0, len = 0;
-  line_rate = convert_atoi_substr(&buffer[2], &len);
-  if ((line_rate <= 0) || (line_rate > 100)) {
-    debug_printf("Invalid line rate!!! should not occur\n");
+  const unsigned char *ptr = *buffer;
+  unsigned int value = 0;
+  while (*ptr && isspace(*ptr))
+    ptr++;
+
+  if (*ptr == '\0')
     return 0;
-  }
-  return line_rate;
+
+  value = atoi((char*)ptr);
+
+  while (*ptr && !isspace(*ptr))
+    ptr++;
+
+  *buffer = ptr;
+  return value;
 }
-
-int validate_pkt_setting(char buffer[])
-{
-  int weight = 0, pkt_size = 0;
-  unsigned len = 0;
-  weight = convert_atoi_substr(&buffer[2], &len);
-  pkt_size = convert_atoi_substr(&buffer[2+len], &len);
-
-  if ((weight <= 0) || (weight > 100)) {
-    debug_printf("Invalid weight; specify a value between 1 and 99 \n");
-    return 0;
-  }
-
-  if ((pkt_size <= 0) || (pkt_size > 1500)) {
-    debug_printf("Invalid pkt_size; specify a value between 1 and 1500 \n");
-    return 0;
-  }
-
-  return 1;
-}
-#endif
 

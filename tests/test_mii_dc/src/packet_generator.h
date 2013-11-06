@@ -35,9 +35,9 @@ typedef struct pkt_gen_ctrl_t {
 void random_traffic_generator(CHANEND_PARAM(chanend, c_tx));
 void get_generator_mode(generator_mode_t *mode);
 void set_generator_mode(generator_mode_t mode);
+void set_directed_read_index(int read_index);
 #ifndef __XC__
-void set_packet_control(pkt_ctrl_t **pkt_ctrl, pkt_type_t pkt_type);
-void set_packet_generation_control(pkt_gen_ctrl_t **pkt_gen_ctrl, pkt_type_t pkt_type);
+pkt_ctrl_t *get_packet_control(pkt_type_t pkt_type, int index);
 #endif //__XC__
 
 #endif // __PACKET_GENERATOR_H__
