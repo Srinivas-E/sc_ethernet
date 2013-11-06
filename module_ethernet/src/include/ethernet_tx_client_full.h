@@ -91,7 +91,7 @@ void mac_tx_timed(chanend c_mac, unsigned int buffer[], int nbytes, unsigned int
  *  \return zero on success and non-zero on failure.
  */
 
-int mac_get_macaddr_full(chanend c_mac, unsigned char macaddr[]);
+int mac_get_macaddr_full(chanend c_mac, unsigned char macaddr[6]);
 
 /**
  * Initialise the ethernet routing table.
@@ -105,7 +105,7 @@ void mac_1722_router_enable_forwarding(chanend c, int key0, int key1);
 
 void mac_1722_router_disable_forwarding(chanend c, int key0, int key1);
 
-void mac_1722_update_router(chanend c, int key0, int key1, int link, int hash);
+void mac_1722_update_router(chanend c, int remove_entry, int key0, int key1, int link, int hash);
 
 /** This function sets the transmit 
  *  bandwidth restriction for Q-tagged traffic out of the mac.
@@ -122,6 +122,7 @@ void mac_1722_update_router(chanend c, int key0, int key1, int link, int hash);
  *
  */
 void mac_set_qav_bandwidth(chanend c_mac,
+                           int port_num,
                            int bits_per_second);
 
 
